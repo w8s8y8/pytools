@@ -5,6 +5,7 @@ import datetime
 import struct
 import lxml.etree
 import re
+import pathlib
 
 crc_length = 100 * 1024
 
@@ -30,7 +31,8 @@ def file_crc32(filename):
 
 
 def bin_merge(application, whole):
-    for filename in os.listdir('.'):
+    for file in os.scandir():
+        filename = file.name
         if re.search('.*Bootloader.bin', filename):
             print('BIN合并.')
             with open(whole, 'wb') as fp:
@@ -49,15 +51,8 @@ def bin_merge(application, whole):
 
 
 if __name__ == '__main__':
-    dirname = None
-    for root, dirs, files in os.walk('.'):
-        for filename in files:
-            if os.path.splitext(filename)[1] == '.ewp':
-                dirname = root.replace('.\\', '')
-                break
-        if dirname:
-            break
-
+    ewp = list(pathlib.Path('.').rglob('*.ewp'))[0]
+    dirname, filename = ewp.parent, ewp.name
     filename = f'{dirname}/{filename}'
 
     print(f'工程文件:{filename}')
