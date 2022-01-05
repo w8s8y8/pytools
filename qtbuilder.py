@@ -2,11 +2,11 @@ import time
 import os
 import shutil
 import re
+import pathlib
 
-version = '1.0.0'
-name = 'BIN合并工具'
+name = 'GOOSE模拟器'
 
-qt_path = 'D:/0/Qt/Qt5.15.2/5.15.2/mingw81_64/bin;D:/0/Qt/Qt5.15.2/Tools/mingw810_64/bin;'
+qt_path = 'D:/0/Qt/Qt5.12.12/5.12.12/mingw73_64/bin;D:/0/Qt/Qt5.12.12/Tools/mingw730_64/bin;'
 
 def qt_deploy(dir_name):
     os.chdir(dir_name)
@@ -22,11 +22,9 @@ def qt_deploy(dir_name):
 
 def find_pro_file():
     print('查找文件夹内的Qt工程文件...')
-    for file_name in os.listdir('.'):
-        file_names = os.path.splitext(file_name)
-        if file_names[1] == '.pro':
-            print(f'\t找到文件{file_name}.\n')
-            return file_name
+    file_name = list(pathlib.Path('.').rglob('*.pro'))[0].name
+    print(f'\t找到文件{file_name}.\n')
+    return file_name
 
 
 def find_line(lines, name):
@@ -40,6 +38,8 @@ def find_target(pro_file):
     with open(pro_file, 'r') as fp:
         lines = fp.readlines()
         target = find_line(lines, 'TARGET = ')
+        if target is None:
+            target = pro_file.replace('.pro', '')
         print(f'\t找到编译目标程序名{target}.\n')
         return target
 
@@ -58,7 +58,7 @@ def git_version():
     with os.popen('git log -1 --format="%h %ct"') as fp:
         v, t = fp.readlines()[0].rstrip().split(' ')
         v = v.upper()
-        t1 = time.strftime(" %Y-%m-%d %H:%M:%S", time.localtime(int(t)))
+        t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(t)))
         t2 = time.strftime("%Y%m%d", time.localtime(int(t)))
         print(f'\t{v} {t1} {t2}\n')
         return [v, t1, t2]
@@ -133,7 +133,6 @@ if __name__ == '__main__':
     if os.path.isfile(release_file):
         print('\t部署Qt.')
         qt_deploy(release_dir)
-
 
         print('\t压缩成zip.')
         shutil.make_archive(release_dir, 'zip', '.', release_dir)
