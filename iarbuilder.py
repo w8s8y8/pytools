@@ -1,11 +1,13 @@
-﻿import time
+import time
 import os
 import shutil
 import datetime
 import struct
 import lxml.etree
-import re
 import pathlib
+import subprocess
+import glob2
+import colorama
 
 crc_length = 100 * 1024
 
@@ -30,32 +32,49 @@ def file_crc32(filename):
         return '{:08X}'.format(crc32)
 
 
+def build(project, start_time, output):
+    print(f'\033[1;32m开始编译工程{project}:\033[0m')
+    commandline = f'{IAR} {filename} -build {project} -parallel 8'
+    last_line_not_empty = False
+    process = subprocess.Popen(commandline, stdout=subprocess.PIPE)
+    while process.poll() is None:
+        line = process.stdout.readline().strip().decode('UTF-8')
+        line_not_empty = len(line) > 0
+        if line_not_empty or last_line_not_empty:
+            print(line)
+        last_line_not_empty = line_not_empty
+    result = os.path.exists(output)
+    if result:
+        print('\033[1;32m编译消耗%d秒.\033[0m\n' % (time.time() - start_time))
+    return result
+
+
 def bin_merge(application, whole):
-    for file in os.scandir():
-        filename = file.name
-        if re.search('.*Bootloader.bin', filename):
-            print('BIN合并.')
-            with open(whole, 'wb') as fp:
-                with open(filename, 'rb') as fp2:
-                    fp.write(fp2.read())
-                with open(application, 'rb') as fp2:
-                    application = fp2.read()
-                    fp.write(application)
-                    size = len(application) % 4
-                    if size > 0:
-                        print(f'补{size}字节.')
-                        fp.write(bytearray([0xFF] * size))
-            break
+    files = glob2.glob('*Bootloader.bin')
+    if files:
+        with open(files[0], 'rb') as fp:
+            bin = fp.read()
+        with open(application, 'rb') as fp:
+            bin += fp.read()
+        count = len(bin) % 4
+        if count > 0:
+            count = 4 - count
+            print(f'\033[1;32m补{count}字节.\033[0m')
+            bin += bytearray([0xFF] * count)
+        with open(whole, 'wb') as fp:
+            fp.write(bin)
     else:
-        print('没有找到Bootloader,不用进行BIN合并.')
+        print('\033[1;32m没有找到Bootloader,不用进行BIN合并.\033[0m')
 
 
 if __name__ == '__main__':
+    colorama.init(autoreset = True)
+
     ewp = list(pathlib.Path('.').rglob('*.ewp'))[0]
     dirname, filename = ewp.parent, ewp.name
     filename = f'{dirname}/{filename}'
 
-    print(f'工程文件:{filename}')
+    print(f'\033[1;32m工程文件:{filename}\033[0m')
 
     x = lxml.etree.parse(filename)
 
@@ -66,18 +85,9 @@ if __name__ == '__main__':
     target = os.path.splitext(output)[0]
     output = f'{dirname}/{exepath}/{output}'
 
-    print(f'输出文件:{output}')
+    print(f'\033[1;32m输出文件:{output}\033[0m')
 
-    print(f'开始编译工程{project}')
-    start_time = time.time()
-    with os.popen(f'{IAR} {filename} -build {project}') as fp:
-        for line in fp.readlines():
-            print(line, end='')
-
-    if os.path.exists(output):
-        elapse = time.time() - start_time
-        print('编译消耗%d秒.\n' % elapse)
-
+    if build(project, time.time(), output):
         crc32 = file_crc32(output)
         now = datetime.datetime.now().strftime('%Y%m%dT%H%M')
         target = f'{target}-{now}-{crc32}.bin'
@@ -85,7 +95,7 @@ if __name__ == '__main__':
 
         bin_merge(target, target.replace('.bin', '-ALL.bin'))
 
-        print('\n结束.')
+        print('\033[1;32m\n结束.\033[0m')
 
         time.sleep(3)
     else:

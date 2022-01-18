@@ -1,12 +1,14 @@
 import time
 import os
 import shutil
-import re
 import pathlib
+import subprocess
 
-name = 'GOOSE模拟器'
+
+name = 'FTU文件传输工具'
 
 qt_path = 'D:/0/Qt/Qt5.12.12/5.12.12/mingw73_64/bin;D:/0/Qt/Qt5.12.12/Tools/mingw730_64/bin;'
+
 
 def qt_deploy(dir_name):
     os.chdir(dir_name)
@@ -27,10 +29,10 @@ def find_pro_file():
     return file_name
 
 
-def find_line(lines, name):
+def find_line(lines, key):
     for line in lines:
-        if re.search(name, line):
-            return line.replace(name, '').replace('\n', '').replace('\r', '')
+        if key in line:
+            return line.replace(key, '').strip()
 
 
 def find_target(pro_file):
@@ -77,12 +79,13 @@ def write_rc_file(rc_file, v, t):
     print('更改RC文件.\n')
     with open(rc_file, 'r') as r:
         lines = r.readlines()
-        with open(rc_file, 'w') as fp:
-            for line in lines:
-                if 'ProductVersion' in line:
-                    s = line.split(',')[0]
-                    line = f'{s}, "{t} {v}"\n'
-                fp.write(line)
+    for line in lines:
+        if 'ProductVersion' in line:
+            s = line.split(',')[0]
+            lines[lines.index(line)] = f'{s}, "{t} {v}"\n'
+            break
+    with open(rc_file, 'w') as fp:
+        fp.writelines(lines)
 
 
 def write_version(rc_file):
@@ -92,19 +95,25 @@ def write_version(rc_file):
     return t2
 
 
+def run(cmdline):
+    last_line_not_empty = False
+    process = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
+    while process.poll() is None:
+        line = process.stdout.readline().strip().decode('UTF-8')
+        line_not_empty = len(line) > 0
+        if line_not_empty or last_line_not_empty:
+            print(line)
+        last_line_not_empty = line_not_empty
+
+
 def build(pro_file, release_file, target):
     print(f'编译工程{pro_file}.\n')
     os.environ['PATH'] = qt_path + os.environ['PATH']
     if not os.path.exists('build'):
         os.mkdir('build')
     os.chdir('build')
-    with os.popen(f'qmake.exe ../{pro_file}') as fp:
-        for line in fp.readlines():
-            print(line, end = '')
-    with os.popen('mingw32-make.exe -j4 release') as fp:
-        for line in fp.readlines():
-            print(line, end = '')
-        print('\n')
+    run(f'qmake.exe ../{pro_file}')
+    run('mingw32-make.exe -j4 release')
     os.chdir('..')
     build_file = f'build/release/{target}.exe'
     if os.path.isfile(build_file):
