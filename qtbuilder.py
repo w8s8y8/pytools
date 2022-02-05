@@ -95,11 +95,11 @@ def write_version(rc_file):
     return t2
 
 
-def run(cmdline):
+def run(cmdline, code='UTF-8'):
     last_line_not_empty = False
     process = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
     while process.poll() is None:
-        line = process.stdout.readline().strip().decode('UTF-8')
+        line = process.stdout.readline().strip().decode(code)
         line_not_empty = len(line) > 0
         if line_not_empty or last_line_not_empty:
             print(line)
@@ -127,25 +127,33 @@ def build(pro_file, release_file, target):
 if __name__ == '__main__':
     pro_file = find_pro_file()
     target = find_target(pro_file)
-    rc_file = find_rc_file(pro_file)
-    release_dir = name + write_version(rc_file)
+    version = write_version(find_rc_file(pro_file))
+    release_dir = name
 
-    print(f'创建文件夹[{release_dir}].\n')
-    if not os.path.exists(release_dir):
-        os.makedirs(release_dir)
+    if not os.path.exists(f'{name}.exe'):
+        print(f'创建文件夹[{release_dir}].\n')
+        if not os.path.exists(release_dir):
+            os.makedirs(release_dir)
 
-    release_file = f'{release_dir}/{name}.exe'
-    build(pro_file, release_file, target)
+        release_file = f'{release_dir}/{name}.exe'
+        build(pro_file, release_file, target)
 
-    print('部署程序.')
+        print('部署程序.')
 
-    if os.path.isfile(release_file):
-        print('\t部署Qt.')
-        qt_deploy(release_dir)
+        if os.path.isfile(release_file):
+            print('\t部署Qt.')
+            qt_deploy(release_dir)
 
-        print('\t压缩成zip.')
-        shutil.make_archive(release_dir, 'zip', '.', release_dir)
-        print(f'\t删除文件夹[{release_dir}].')
-        shutil.rmtree(release_dir)
+            run(f'upx.exe --best {release_dir}/{name}.exe', 'GB2312')
+        else:
+            time.sleep(10)
     else:
-        time.sleep(10)
+        print('打包压缩应用程序.')
+        if os.path.exists(release_dir):
+            shutil.rmtree(release_dir)
+
+        release_dir += version
+        os.makedirs(release_dir)
+        shutil.move(f'{name}.exe', f'{release_dir}/{name}.exe')
+        shutil.make_archive(release_dir, 'zip', '.', release_dir)
+        shutil.rmtree(release_dir)
