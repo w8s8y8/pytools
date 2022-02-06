@@ -3,11 +3,20 @@ import os
 import shutil
 import pathlib
 import subprocess
+import colorama
 
 
 name = 'FTU文件传输工具'
 
+
 qt_path = 'D:/0/Qt/Qt5.12.12/5.12.12/mingw73_64/bin;D:/0/Qt/Qt5.12.12/Tools/mingw730_64/bin;'
+
+
+enigmavbconsole = 'C:/Program Files (x86)/Enigma Virtual Box/enigmavbconsole.exe'
+
+
+def prompt(message):
+    print(f'\033[1;32m{message}\033[0m')
 
 
 def qt_deploy(dir_name):
@@ -23,9 +32,9 @@ def qt_deploy(dir_name):
 
 
 def find_pro_file():
-    print('查找文件夹内的Qt工程文件...')
+    prompt('查找文件夹内的Qt工程文件...')
     file_name = list(pathlib.Path('.').rglob('*.pro'))[0].name
-    print(f'\t找到文件{file_name}.\n')
+    prompt(f'\t找到文件{file_name}.\n')
     return file_name
 
 
@@ -36,38 +45,38 @@ def find_line(lines, key):
 
 
 def find_target(pro_file):
-    print(f'查找{pro_file}文件内的编译目标程序名...')
+    prompt(f'查找{pro_file}文件内的编译目标程序名...')
     with open(pro_file, 'r') as fp:
         lines = fp.readlines()
         target = find_line(lines, 'TARGET = ')
         if target is None:
             target = pro_file.replace('.pro', '')
-        print(f'\t找到编译目标程序名{target}.\n')
+        prompt(f'\t找到编译目标程序名{target}.\n')
         return target
 
 
 def find_rc_file(pro_file):
-    print(f'查找{pro_file}文件内的RC文件名...')
+    prompt(f'查找{pro_file}文件内的RC文件名...')
     with open(pro_file, 'r') as fp:
         lines = fp.readlines()
         rc_file = find_line(lines, 'RC_FILE = ')
-        print(f'\t找到RC文件名{rc_file}.\n')
+        prompt(f'\t找到RC文件名{rc_file}.\n')
         return rc_file
 
 
 def git_version():
-    print('读取git版本...')
+    prompt('读取git版本...')
     with os.popen('git log -1 --format="%h %ct"') as fp:
         v, t = fp.readlines()[0].rstrip().split(' ')
         v = v.upper()
         t1 = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(int(t)))
         t2 = time.strftime("%Y%m%d", time.localtime(int(t)))
-        print(f'\t{v} {t1} {t2}\n')
+        prompt(f'\t{v} {t1} {t2}\n')
         return [v, t1, t2]
 
 
 def generate_h_file(version):
-    print('生成version.h.\n')
+    prompt('生成version.h.\n')
     with open('version.h', 'w') as fp:
         fp.write('#ifndef VERSION_H\n')
         fp.write('#define VERSION_H\n\n')
@@ -76,7 +85,7 @@ def generate_h_file(version):
 
 
 def write_rc_file(rc_file, v, t):
-    print('更改RC文件.\n')
+    prompt('更改RC文件.\n')
     with open(rc_file, 'r') as r:
         lines = r.readlines()
     for line in lines:
@@ -95,7 +104,7 @@ def write_version(rc_file):
     return t2
 
 
-def run(cmdline, code='UTF-8'):
+def command(cmdline, code='UTF-8'):
     last_line_not_empty = False
     process = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
     while process.poll() is None:
@@ -107,17 +116,17 @@ def run(cmdline, code='UTF-8'):
 
 
 def build(pro_file, release_file, target):
-    print(f'编译工程{pro_file}.\n')
+    prompt(f'编译工程{pro_file}.\n')
     os.environ['PATH'] = qt_path + os.environ['PATH']
     if not os.path.exists('build'):
         os.mkdir('build')
     os.chdir('build')
-    run(f'qmake.exe ../{pro_file}')
-    run('mingw32-make.exe -j4 release')
+    command(f'qmake.exe ../{pro_file}')
+    command('mingw32-make.exe -j4 release')
     os.chdir('..')
     build_file = f'build/release/{target}.exe'
     if os.path.isfile(build_file):
-        print(f'生成文件{build_file}.\n')
+        prompt(f'生成文件{build_file}.\n')
         if os.path.isfile(release_file):
             os.remove(release_file)
         shutil.move(build_file, release_file)
@@ -125,35 +134,45 @@ def build(pro_file, release_file, target):
 
 
 if __name__ == '__main__':
+    colorama.init(autoreset = True)
+
     pro_file = find_pro_file()
     target = find_target(pro_file)
     version = write_version(find_rc_file(pro_file))
-    release_dir = name
+    release_dir = 'release'
 
-    if not os.path.exists(f'{name}.exe'):
-        print(f'创建文件夹[{release_dir}].\n')
-        if not os.path.exists(release_dir):
-            os.makedirs(release_dir)
+    exe = 'release.exe'
 
-        release_file = f'{release_dir}/{name}.exe'
-        build(pro_file, release_file, target)
-
-        print('部署程序.')
-
-        if os.path.isfile(release_file):
-            print('\t部署Qt.')
-            qt_deploy(release_dir)
-
-            run(f'upx.exe --best {release_dir}/{name}.exe', 'GB2312')
-        else:
-            time.sleep(10)
-    else:
-        print('打包压缩应用程序.')
-        if os.path.exists(release_dir):
-            shutil.rmtree(release_dir)
-
-        release_dir += version
+    prompt(f'创建文件夹[{release_dir}].\n')
+    if not os.path.exists(release_dir):
         os.makedirs(release_dir)
-        shutil.move(f'{name}.exe', f'{release_dir}/{name}.exe')
-        shutil.make_archive(release_dir, 'zip', '.', release_dir)
+
+    release_file = f'{release_dir}/{exe}'
+    build(pro_file, release_file, target)
+
+    prompt('部署程序.')
+
+    if os.path.isfile(release_file):
+        prompt('\t部署Qt.\n')
+        qt_deploy(release_dir)
+
+        prompt('\tUPX压缩.\n')
+        command(f'upx.exe --best {release_file}', 'GB2312')
+
+        prompt('\t封包.\n')
+        evbproject = list(pathlib.Path('.').rglob('*.evb'))[0].name
+        command(f'{enigmavbconsole} {evbproject}')
         shutil.rmtree(release_dir)
+
+        prompt('\t打包压缩应用程序.')
+        release_zip_dir = name + version
+        os.makedirs(release_zip_dir)
+        shutil.move(f'{exe}', f'{release_zip_dir}/{name}.exe')
+        shutil.make_archive(release_zip_dir, 'zip', '.', release_zip_dir)
+        shutil.rmtree(release_zip_dir)
+
+        prompt('结束.')
+
+        time.sleep(3)
+    else:
+        time.sleep(10)
