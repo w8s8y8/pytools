@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import xml
+import xml.etree.ElementTree as ET
 import glob2
 
 def node_set(node, path, value):
@@ -17,7 +17,7 @@ def node_remove(node, path):
 
 
 def ewp_conversion(source, destination):
-    ewp = xml.etree.ElementTree.parse(source)
+    ewp = ET.parse(source)
 
     root = ewp.getroot()
 
@@ -41,7 +41,7 @@ def ewp_conversion(source, destination):
 
 
 def ewt_conversion(source, destination):
-    ewt = xml.etree.ElementTree.parse(source)
+    ewt = ET.parse(source)
 
     root = ewt.getroot()
 
@@ -58,7 +58,7 @@ def ewt_conversion(source, destination):
 
 
 def ewd_conversion(source, destination):
-    ewd = xml.etree.ElementTree.parse(source)
+    ewd = ET.parse(source)
 
     root = ewd.getroot()
 
