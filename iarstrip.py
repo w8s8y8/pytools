@@ -3,7 +3,7 @@ import shutil
 import stat
 
 
-iar_path = 'D:/0/IAR Systems/Embedded Workbench 9.1'
+iar_path = 'D:/0/IAR Systems/Embedded Workbench 9.2'
 
 
 def remove_dir(path):
@@ -45,3 +45,8 @@ if __name__ == '__main__':
     remove_dirs('arm/src/flashloader', ex)
 
     remove_dir('arm/CMSIS')
+
+    remove_dir('arm/bin/Nu-Link')
+    remove_dir('arm/bin/pemicro')
+    remove_dir('arm/bin/jet')
+    remove_dir('arm/bin/renesas')
