@@ -2,10 +2,10 @@
 
 import datetime
 import time
-import fileinput
+import codecs
 import subprocess
 
-def run(cmdline):
+def runcommand(cmdline):
     process = subprocess.Popen(cmdline, stdout=subprocess.PIPE)
     last_line_not_empty = False
     while process.poll() is None:
@@ -15,23 +15,25 @@ def run(cmdline):
             print(line)
         last_line_not_empty = line_not_empty
 
+
 if __name__ == '__main__':
-    file = fileinput.FileInput('message.txt', openhook=fileinput.hook_encoded('utf-8'))
+    with codecs.open('gitmessage.txt', 'r', encoding='utf-8') as fp:
+        timestamp = fp.readline().strip()
+        message  = fp.readline().strip()
 
-    end, message  = [file.readline().strip(), file.readline().strip()]
-
-    print(end)
+    print(timestamp)
     print(message)
 
-    end = datetime.datetime.strptime(end, '%Y-%m-%d %H:%M:%S')
+    end = datetime.datetime.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+    timestamp = timestamp.replace(' ', 'T')
 
     seconds = (end - datetime.datetime.now()).total_seconds()
 
-    if seconds > 0:
-        time.sleep(seconds)
-        run('git add message.txt')
+    if seconds > 2:
+        time.sleep(seconds - 2)
+        runcommand('git add gitmessage.txt')
         time.sleep(2)
-        run(f'git commit -m \"{message}\"')
+        runcommand(f'git commit -m \"{message}\" --date="{timestamp}"')
         time.sleep(2)
-        run('git -c diff.mnemonicprefix=false -c core.quotepath=false --no-optional-locks push -v --tags origin master:master')
+        runcommand('git -c diff.mnemonicprefix=false -c core.quotepath=false --no-optional-locks push -v --tags origin master:master')
         time.sleep(10)
