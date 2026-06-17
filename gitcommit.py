@@ -2,7 +2,6 @@
 
 import datetime
 import time
-import codecs
 import subprocess
 
 def runcommand(cmdline):
@@ -17,7 +16,7 @@ def runcommand(cmdline):
 
 
 if __name__ == '__main__':
-    with codecs.open('gitmessage.txt', 'r', encoding='utf-8') as fp:
+    with open('gitmessage.txt', 'r', encoding='utf-8') as fp:
         timestamp = fp.readline().strip()
         message  = fp.readline().strip()
 
